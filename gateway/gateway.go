@@ -14,7 +14,15 @@ import (
 var Verbose bool = false
 var NumClientsServed int = 0
 
-func handleConnection(conn net.Conn, clientid int) {
+func handleConnection(conn net.Conn, clientid int, udpport int) {
+
+	udpserver, err := net.Dial("udp", "127.0.0.1:"+strconv.FormatInt(int64(udpport), 10))
+	if err != nil {
+		fmt.Printf("Some error %v", err)
+		return
+	}
+	defer udpserver.Close()
+
 	messagecount := 0
 	for {
 		buffer, err := bufio.NewReader(conn).ReadBytes('\n')
@@ -24,7 +32,7 @@ func handleConnection(conn net.Conn, clientid int) {
 			return
 		}
 		log.Printf("Client %d message: %s", clientid, string(buffer[:len(buffer)-1]))
-		//conn.Write(buffer)
+		udpserver.Write(buffer[:len(buffer)-1])
 		messagecount++
 	}
 }
@@ -49,7 +57,7 @@ func Serve(sockport int, udpport int) {
 
 		fmt.Println("Client " + c.RemoteAddr().String() + " connected.")
 		NumClientsServed++
-		go handleConnection(c, NumClientsServed)
+		go handleConnection(c, NumClientsServed, udpport)
 	}
 }
 
